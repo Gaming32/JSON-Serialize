@@ -1,12 +1,27 @@
 import sys
-import json, uuid
+import json, uuid, warnings
+
+class VersionError(ValueError): pass
+class VersionWarning(Warning): pass
+
+__version__ = '1.0.0'
+__author__ = 'Gaming32'
+
+VERSION = 1
+MIN_VERSION = 1
+_MIN_DES_VER = 1
+_VER_ERROR_LVL = 1
+
+def set_version_error_level(level=1):
+    global _VER_ERROR_LVL
+    _VER_ERROR_LVL = level
 
 MODE_YES = 'yes'
 MODE_NO = 'no'
 MODE_FALLBACK = 'fallback'
 MODE_REPR = 'repr'
 MODE_FUNCTION = 'function'
-_MODE_IID = 'iid'
+_MODE_UUID = 'uuid'
 class FALLBACK: pass
 
 def _serialize_list(obj, _reached):
@@ -34,41 +49,56 @@ def serialization_settings(serialization_mode=MODE_YES, serialization_function=N
     return descriptor
 
 def _in_set_obj(set, obj):
-    for (iid, item) in set:
+    for (uuid_, item) in set:
         if item is obj:
-            return iid, item
+            return uuid_, item
     return None
-def _in_set_iid(set, iid):
-    for (this_iid, item) in set:
-        if this_iid == iid:
-            return iid, item
+def _in_set_uuid(set, uuid_):
+    for (this_uuid, item) in set:
+        if this_uuid == uuid_:
+            return uuid_, item
     return None
 def _set_add_obj(set, obj):
-    iid = uuid.uuid1().int
-    _set_add_iid(set, iid, obj)
-    return iid
-def _set_add_iid(set, iid, obj):
-    set.append((iid, obj))
+    uuid_ = uuid.uuid1().int
+    _set_add_uuid(set, uuid_, obj)
+    return uuid_
+def _set_add_uuid(set, uuid_, obj):
+    set.append((uuid_, obj))
+
+def version_check(version, min_version):
+    if version > VERSION:
+        if MIN_VERSION >= min_version:
+            return True
+        else:
+            return False
+    else:
+        if version >= MIN_VERSION:
+            return True
+        else:
+            return False
 
 def convert_to_data(obj, _reached=None):
     if _reached is None:
         _reached = list()
 
     data = {}
+    data['version'] = VERSION
+    data['min_version'] = _MIN_DES_VER
+
     data['module'] = obj.__class__.__module__
     data['type'] = obj.__class__.__name__
     data['attrs'] = {}
     
     in_set = _in_set_obj(_reached, obj)
     if in_set is not None:
-        iid, item = in_set
-        data['mode'] = _MODE_IID
-        data['iid'] = iid
-        data['force_use_iid'] = True
+        uuid_, item = in_set
+        data['mode'] = _MODE_UUID
+        data['uuid'] = uuid_
+        data['force_use_uuid'] = True
         return data
 
-    iid = _set_add_obj(_reached, obj)
-    data['iid'] = iid
+    uuid_ = _set_add_obj(_reached, obj)
+    data['uuid'] = uuid_
 
     if type(obj).__name__ not in type_settings:
         serialization_setting = MODE_YES
@@ -98,9 +128,9 @@ def convert_to_data(obj, _reached=None):
 
         in_set = _in_set_obj(_reached, obj_attr)
         if in_set is not None:
-            iid, item = in_set
-            location['mode'] = _MODE_IID
-            location['iid'] = iid
+            uuid_, item = in_set
+            location['mode'] = _MODE_UUID
+            location['uuid'] = uuid_
             continue
 
         if type(obj_attr).__name__ not in type_settings:
@@ -109,8 +139,8 @@ def convert_to_data(obj, _reached=None):
             serialization_setting = type_settings[type(obj_attr).__name__][0]
             serialization_function = type_settings[type(obj_attr).__name__][1]
 
-        iid = _set_add_obj(_reached, obj_attr)
-        location['iid'] = iid
+        uuid_ = _set_add_obj(_reached, obj_attr)
+        location['uuid'] = uuid_
         location['mode'] = serialization_setting
 
         if serialization_setting == MODE_YES:
@@ -132,12 +162,19 @@ def convert_to_data(obj, _reached=None):
     return data
 
 def convert_to_obj(data, allow_mode_repr=True, _reached=None):
-    if 'force_use_iid' in data:
-        in_set = _in_set_iid(_reached, data['iid'])
+    if not version_check(data['version'], data['min_version']):
+        message = 'data version %i incompatable with data version %i' % (data['version'], VERSION)
+        if _VER_ERROR_LVL == 2:
+            raise VersionError(message)
+        elif _VER_ERROR_LVL == 1:
+            warnings.warn(VersionWarning(message))
+
+    if 'force_use_uuid' in data:
+        in_set = _in_set_uuid(_reached, data['uuid'])
         if in_set is not None:
             return in_set[1]
         else:
-            raise IndexError('No object with iid "%i"' % data['iid'])
+            raise IndexError('No object with uuid "%i"' % data['uuid'])
 
     if _reached is None:
         _reached = list()
@@ -151,7 +188,7 @@ def convert_to_obj(data, allow_mode_repr=True, _reached=None):
         deserialization_function = type_settings[data['type']][2]
 
     obj = obj_type.__new__(obj_type)
-    _set_add_iid(_reached, data['iid'], obj)
+    _set_add_uuid(_reached, data['uuid'], obj)
 
     if serialization_setting == MODE_FALLBACK:
         return data['value']
@@ -161,7 +198,7 @@ def convert_to_obj(data, allow_mode_repr=True, _reached=None):
     for (name, attrdata) in data['attrs'].items():
         mode = attrdata['mode']
         value = attrdata['value']
-        iid = attrdata['iid']
+        uuid_ = attrdata['uuid']
 
         if mode == MODE_YES:
             obj_attr = convert_to_obj(value, _reached)
@@ -176,16 +213,16 @@ def convert_to_obj(data, allow_mode_repr=True, _reached=None):
                 raise ValueError('MODE_REPR is not allowed; was attempting to deserialize "%s"' % value)
         elif mode == MODE_FUNCTION:
             obj_attr = type_settings[attrdata['class']][2](value, allow_mode_repr, _reached)
-        elif mode == _MODE_IID:
-            in_set = _in_set_iid(_reached, iid)
+        elif mode == _MODE_UUID:
+            in_set = _in_set_uuid(_reached, uuid_)
             if in_set is not None:
-                iid, obj_attr = in_set
+                uuid_, obj_attr = in_set
             else:
-                raise IndexError('No object with iid "%i"' % iid)
+                raise IndexError('No object with uuid "%i"' % uuid_)
         else:
             raise ValueError('Unknown serialization mode "%s"' % mode)
         setattr(obj, name, obj_attr)
-        _set_add_iid(_reached, iid, obj_attr)
+        _set_add_uuid(_reached, uuid_, obj_attr)
     return obj
 
 def dump(obj, *jargs, **jkwargs):
