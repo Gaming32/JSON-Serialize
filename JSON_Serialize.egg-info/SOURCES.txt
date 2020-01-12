@@ -1,0 +1,7 @@
+README.md
+json_serialize.py
+setup.py
+JSON_Serialize.egg-info/PKG-INFO
+JSON_Serialize.egg-info/SOURCES.txt
+JSON_Serialize.egg-info/dependency_links.txt
+JSON_Serialize.egg-info/top_level.txt

@@ -1,0 +1,84 @@
+# Using the Module
+## Converting to a Python `dict` object
+To convert a Python object to a Python `dict` (Dictionary) object, you use the `convert_to_data` function.
+
+### Usage
+`convert_to_data(obj, _reached=None)`
+
+### Arguments
+
+Argument   | Type       | Description | Default Value
+---------- | ---------- | ----------- | -----------
+obj | Any | The object to convert to a Python `dict` object | required
+_reached | Set | A value passed to the function internally for recursive data structures | None
+
+### Example
+
+```python
+>>> class A:
+...     def __init__(self, obj):
+...         self.obj = obj
+... 
+>>> obj1 = A('Hello World!')
+>>> data = convert_to_data(obj1)
+>>> data
+{'version': 1, 'min_version': 1, 'module': '__main__', 'type': 'A', 'attrs': {'obj': {'value': 'Hello World!', 'uuid': 192575949315149374534195982055635280394, 'mode': 'fallback'}}, 'uuid': 192575949235921212021180267458779800074}
+```
+
+## Converting back to a normal Python object
+To convert a Python mapping back into a normal Python object, you use the `convert_to_obj` function.
+
+### Usage
+`convert_to_obj(data, allow_mode_repr=True, _reached=None)`
+
+### Arguments
+
+Argument   | Type       | Description | Default Value
+---------- | ---------- | ----------- | -----------
+data | Mapping | The mapping to convert back to a Python object (a `dict` is a mapping) | required
+allow_mode_repr | bool | Whether to enable MODE_REPR; you might want to have this enabled because the deserialization function of MODE_REPR uses `eval` which is insecure | True
+_reached | Set | A value passed to the function internally for recursive data structures | None
+
+### Example
+
+``` python
+>>> data = {'version': 1, 'min_version': 1, 'module': '__main__', 'type': 'A', 'attrs': {'obj': {'value': 'Hello World!', 'uuid': 192575949315149374534195982055635280394, 'mode': 'fallback'}}, 'uuid': 192575949235921212021180267458779800074}
+>>> obj2 = convert_to_obj(data)
+>>> obj2
+<__main__.A at 0x2473cbb88e0>
+```
+
+## Storing and Reading JSON
+To store and read JSON-serialized objects, you use the `dump`, `dumps`, `load`, and `loads` functions.
+
+### `dump` and `dumps`
+Serializes `obj` and passes `*jargs` and `**jkwargs` to `json.dump` and `json.dumps` respectively.
+
+### `load` and `loads`
+Deserializes the JSON data from `json.dump` or `json.dumps`. It passes `*jargs` and `**jkwargs` to `json.dump` and `json.dumps` respectively.
+
+## Modifying how the serializer serializes specific types
+To modify how the serializer serializes specific types you use the `type_settings` descriptor.
+
+### Usage
+`@type_settings(serialization_mode=MODE_YES, serialization_function=None, deserialization_function=None)`
+
+### Arguments
+
+Argument   | Type       | Description | Default Value
+---------- | ---------- | ----------- | -----------
+serialization_mode | any of the MODE_* constants | The method used to serialize (and possibly deserialize the type) | MODE_YES
+serialization_function | Union[None, Callable[[object, Set], JsonSupported]] | The function to serialize with (for MODE_FUNCTION); or `None` for others | None
+deserialization_function | Union[None, Callable[[JsonSupported, bool, Set], object]] | The function to serialize with (for MODE_FUNCTION); or `None` for others | None
+
+### Modes
+#### MODE_YES
+serialize the type
+#### MODE_NO
+don't serialize the type, always deserializes as `None`
+#### MODE_FALLBACK
+fallback to the JSON module types, the types can be found at https://docs.python.org/3/library/json.html#json.JSONDecoder
+#### MODE_REPR
+serializes with `repr(obj)`, deserializes with `eval(data)`
+#### MODE_FUNCTION
+uses `serialization_function` to serialize, and `deserialization_function` to deserialize
