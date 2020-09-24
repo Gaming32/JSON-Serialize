@@ -28,6 +28,7 @@ Descriptors:
         serialization_function:Union[None, Callable[[object, Set], Mapping]]=None,
         deserialization_function:Union[None, Callable[[dict, bool, Set], None]]=None)"""
 
+import builtins
 import sys
 import json, uuid, warnings, typing
 
@@ -36,7 +37,7 @@ class VersionError(ValueError):
 class VersionWarning(Warning):
     """Warned when an incompatible version is detected and the version error level is 1"""
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 __author__ = 'Gaming32'
 
 VERSION = 1
@@ -95,6 +96,8 @@ type_settings = {
     'bool': [MODE_FALLBACK, None, None],
     'NoneType': [MODE_FALLBACK, None, None],
 }
+
+builtins.NoneType = type(None)
 
 def serialization_settings(serialization_mode=MODE_YES,
     serialization_function:typing.Union[None, typing.Callable[[object, Set], JsonSupported]]=None,
