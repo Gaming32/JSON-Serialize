@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: JSON-Serialize
-Version: 1.0.0
+Version: 1.0.1
 Summary: Module that serializes Python objects into JSON
 Home-page: https://github.com/gaming32/json-serialize
 Author: Gaming32

@@ -4,7 +4,7 @@ README = open('README.md').read()
 
 setuptools.setup(
     name = 'JSON Serialize',
-    version = '1.0.0',
+    version = '1.0.1',
     url = 'https://github.com/gaming32/json-serialize',
     author = 'Gaming32',
     author_email = 'gaming32i64@gmail.com',

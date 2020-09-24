@@ -36,7 +36,7 @@ class VersionError(ValueError):
 class VersionWarning(Warning):
     """Warned when an incompatible version is detected and the version error level is 1"""
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 __author__ = 'Gaming32'
 
 VERSION = 1
@@ -75,12 +75,22 @@ def _serialize_dict(obj, _reached):
     return {k: convert_to_data(x, _reached) for (k, x) in obj.items()}
 def _deserialize_dict(value, allow_mode_repr, _reached):
     return {k: convert_to_obj(x, allow_mode_repr, _reached) for (k, x) in value.items()}
+def _serialize_tuple(obj, *args):
+    return _serialize_list(list(obj), *args)
+def _deserialize_tuple(*args):
+    return tuple(_deserialize_list(*args))
+def _serialize_set(obj, *args):
+    return _serialize_list(list(obj), *args)
+def _deserialize_set(*args):
+    return set(_deserialize_list(*args))
 
 type_settings = {
     'str': [MODE_FALLBACK, None, None],
     'int': [MODE_FALLBACK, None, None],
     'float': [MODE_FALLBACK, None, None],
     'list': [MODE_FUNCTION, _serialize_list, _deserialize_list],
+    'tuple': [MODE_FUNCTION, _serialize_tuple, _deserialize_tuple],
+    'set': [MODE_FUNCTION, _serialize_set, _deserialize_set],
     'dict': [MODE_FUNCTION, _serialize_dict, _deserialize_dict],
     'bool': [MODE_FALLBACK, None, None],
     'NoneType': [MODE_FALLBACK, None, None],
